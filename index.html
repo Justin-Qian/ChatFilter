@@ -28,9 +28,128 @@
             <!-- 聊天界面 -->
             <template v-else>
                 <div class="main-container">
+                    <!-- 用户资料弹窗 -->
+                    <div v-if="showProfileWizard || showProfile" class="profile-modal">
+                        <div class="profile-content">
+                            <!-- 首次设置向导 -->
+                            <template v-if="showProfileWizard">
+                                <h3>Welcome! Let's Set Up Your Profile</h3>
+                                <p class="wizard-intro">Please tell us a bit about yourself before starting.</p>
+                                <graffiti-discover
+                                    v-slot="{ objects: profiles }"
+                                    :channels="[$graffitiSession.value.actor]"
+                                    :actor="$graffitiSession.value.actor"
+                                    :schema="{
+                                        properties: {
+                                            value: {
+                                                required: ['name'],
+                                                properties: {
+                                                    name: { type: 'string' },
+                                                    pronouns: { type: 'string' },
+                                                    bio: { type: 'string' }
+                                                }
+                                            }
+                                        }
+                                    }"
+                                >
+                                    <form @submit.prevent="saveProfile($graffitiSession.value, profiles)" class="profile-form">
+                                        <div class="form-group">
+                                            <label>Name: <span class="required">*</span></label>
+                                            <input type="text" v-model="profileForm.name" required autofocus>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Pronouns:</label>
+                                            <input type="text" v-model="profileForm.pronouns" placeholder="e.g., he/him">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Bio:</label>
+                                            <input type="text" v-model="profileForm.bio" placeholder="Tell us about yourself">
+                                        </div>
+                                        <div class="profile-actions">
+                                            <button type="submit" class="save-btn">Start Chatting</button>
+                                        </div>
+                                    </form>
+                                </graffiti-discover>
+                            </template>
+
+                            <!-- 显示当前资料 -->
+                            <template v-else>
+                                <h3>Your Profile</h3>
+                                <graffiti-discover
+                                    v-slot="{ objects: profiles }"
+                                    :channels="[$graffitiSession.value.actor]"
+                                    :actor="$graffitiSession.value.actor"
+                                    :schema="{
+                                        properties: {
+                                            value: {
+                                                required: ['name'],
+                                                properties: {
+                                                    name: { type: 'string' },
+                                                    pronouns: { type: 'string' },
+                                                    bio: { type: 'string' }
+                                                }
+                                            }
+                                        }
+                                    }"
+                                    :sort="(a, b) => b.value.published - a.value.published"
+                                    :key="Date.now()"
+                                >
+                                    <div class="profile-display" v-if="profiles.length > 0">
+                                        <div class="profile-info">
+                                            <!-- 非编辑状态 -->
+                                            <template v-if="!isEditing">
+                                                <div class="profile-field">
+                                                    <label>Name</label>
+                                                    <span>{{ profiles[0].value.name }}</span>
+                                                </div>
+                                                <div class="profile-field">
+                                                    <label>Pronouns</label>
+                                                    <span>{{ profiles[0].value.pronouns || '' }}</span>
+                                                </div>
+                                                <div class="profile-field">
+                                                    <label>Bio</label>
+                                                    <span>{{ profiles[0].value.bio || '' }}</span>
+                                                </div>
+                                            </template>
+
+                                            <!-- 编辑状态 -->
+                                            <template v-else>
+                                                <div class="profile-field">
+                                                    <label>Name <span class="required">*</span></label>
+                                                    <input type="text" v-model="editForm.name" required>
+                                                </div>
+                                                <div class="profile-field">
+                                                    <label>Pronouns</label>
+                                                    <input type="text" v-model="editForm.pronouns">
+                                                </div>
+                                                <div class="profile-field">
+                                                    <label>Bio</label>
+                                                    <input type="text" v-model="editForm.bio">
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="profile-actions">
+                                            <template v-if="!isEditing">
+                                                <button type="button" @click="startProfileEdit(profiles[0])" class="edit-btn">Edit Profile</button>
+                                                <button type="button" @click="showProfile = false" class="close-btn">Close</button>
+                                            </template>
+                                            <template v-else>
+                                                <button type="button" @click="saveProfileChanges($graffitiSession.value, profiles)" class="save-btn">Save Changes</button>
+                                                <button type="button" @click="cancelProfileEdit" class="cancel-btn">Cancel</button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </graffiti-discover>
+                            </template>
+                        </div>
+                    </div>
+
                     <div class="header">
                         <h2>NYC Trip</h2>
-                        <button @click="$graffiti.logout($graffitiSession.value)" class="logout-button">Log Out</button>
+                        <div class="header-controls">
+                            <button @click="showProfile = true" class="profile-button">Profile</button>
+                            <button @click="$graffiti.logout($graffitiSession.value)" class="logout-button">Log Out</button>
+                        </div>
                     </div>
 
                     <!-- 面板切换按钮 -->
@@ -71,58 +190,19 @@
                                 <div class="messages">
                                     <div v-if="isInitialPolling">Loading messages...</div>
                                     <ul v-else>
-                                        <li
-                                            v-for="message of messageObjects.sort((a, b) => b.value.published - a.value.published)"
+                                        <li v-for="message of messageObjects.sort((a, b) => b.value.published - a.value.published)"
                                             :key="message.url"
-                                            :class="{
-                                                'my-message': message.actor === $graffitiSession.value.actor
-                                            }"
                                         >
-                                            <div class="message-header">
-                                                <strong>
-                                                    {{ message.actor }}<span
-                                                        v-if="message.actor === $graffitiSession.value.actor"
-                                                    >
-                                                        (you)</span
-                                                    >
-                                                </strong>
-                                                <div class="message-themes">
-                                                    <span
-                                                        v-for="(theme, index) in message.value.themes"
-                                                        :key="index"
-                                                        class="message-theme"
-                                                        :class="theme.toLowerCase()"
-                                                    >
-                                                        {{ theme }}
-                                                    </span>
-                                                </div>
-                                                <div class="message-actions" v-if="message.actor === $graffitiSession.value.actor">
-                                                    <button @click="startEdit(message)" class="action-btn">Edit</button>
-                                                    <button @click="deleteMessage(message, $graffitiSession.value)" class="action-btn delete">Delete</button>
-                                                </div>
-                                            </div>
-
-                                            <!-- 编辑模式 -->
-                                            <div v-if="editingMessage && editingMessage.url === message.url" class="edit-mode">
-                                                <input
-                                                    type="text"
-                                                    v-model="editContent"
-                                                    @keyup.enter="saveEdit($graffitiSession.value)"
-                                                    @keyup.esc="cancelEdit"
-                                                />
-                                                <div class="edit-actions">
-                                                    <button @click="saveEdit($graffitiSession.value)" class="action-btn">Save</button>
-                                                    <button @click="cancelEdit" class="action-btn">Cancel</button>
-                                                </div>
-                                            </div>
-
-                                            <!-- 显示模式 -->
-                                            <div v-else class="message-content">
-                                                {{ message.value.content }}
-                                            </div>
-                                            <div class="message-time">
-                                                {{ new Date(message.value.published).toLocaleString() }}
-                                            </div>
+                                            <message-item
+                                                :content="message.value.content"
+                                                :themes="message.value.themes || []"
+                                                :time="message.value.published"
+                                                :is-my-message="message.actor === $graffitiSession.value.actor"
+                                                :display-name="message.actor === $graffitiSession.value.actor ? (userProfile?.value.name || 'You') : message.actor"
+                                                :can-edit="message.actor === $graffitiSession.value.actor"
+                                                @edit="startEdit(message)"
+                                                @delete="deleteMessage(message, $graffitiSession.value)"
+                                            />
                                         </li>
                                     </ul>
                                 </div>
@@ -240,11 +320,12 @@
                                         >
                                             <div class="message-header">
                                                 <strong>
-                                                    {{ message.actor }}<span
-                                                        v-if="message.actor === $graffitiSession.value.actor"
-                                                    >
-                                                        (you)</span
-                                                    >
+                                                    <template v-if="message.actor === $graffitiSession.value.actor">
+                                                        {{ userProfile?.value.name || 'You' }}
+                                                    </template>
+                                                    <template v-else>
+                                                        {{ message.actor }}
+                                                    </template>
                                                 </strong>
                                                 <div class="message-themes">
                                                     <span

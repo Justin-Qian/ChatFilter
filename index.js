@@ -2,8 +2,12 @@ import { createApp } from "vue";
 import { GraffitiLocal } from "@graffiti-garden/implementation-local";
 import { GraffitiRemote } from "@graffiti-garden/implementation-remote";
 import { GraffitiPlugin } from "@graffiti-garden/wrapper-vue";
+import MessageItem from "./MessageItem.js";
 
 createApp({
+  components: {
+    MessageItem
+  },
   data() {
     return {
       myMessage: "",
@@ -14,19 +18,127 @@ createApp({
       editingMessage: null,
       editContent: "",
       activePanel: 'all',
+      // 用户资料
+      userProfile: null,
+      showProfileWizard: false,  // 控制向导显示
+      showProfile: false,  // 控制资料显示
+      profileForm: {
+        name: "",
+        pronouns: "",
+        bio: "",
+      },
       // 聊天频道设置
       mainChannel: "travel-chat-channel",
       generalChannel: "travel-general-channel", // 无主题消息的频道
+      profileChannel: "user-profiles-channel", // 用户资料频道
       themeChannels: {
         Attraction: "travel-attraction-channel",
         Food: "travel-food-channel",
         Stay: "travel-stay-channel",
         Leisure: "travel-leisure-channel"
-      }
+      },
+      isEditing: false,
+      editForm: {
+        name: "",
+        pronouns: "",
+        bio: "",
+      },
+      editingProfile: null,
     };
   },
 
   methods: {
+    // 获取用户资料
+    async fetchUserProfile(session) {
+      try {
+        const profiles = await this.$graffiti.get({
+          channels: [session.actor],
+          actor: session.actor
+        });
+
+        // 检查是否有资料
+        if (profiles && profiles.length > 0) {
+          // 已有资料，直接使用
+          this.userProfile = profiles[0];
+          this.profileForm = { ...this.userProfile.value };
+          this.showProfileWizard = false;  // 确保向导不显示
+          console.log("Found existing profile:", this.userProfile);
+        } else {
+          // 没有资料，显示向导
+          console.log("No profile found, showing wizard");
+          this.userProfile = null;
+          this.profileForm = { name: "", pronouns: "", bio: "" };
+          this.showProfileWizard = true;
+        }
+      } catch (error) {
+        console.log("Error fetching profile:", error);
+        // 出错时也显示向导
+        this.userProfile = null;
+        this.profileForm = { name: "", pronouns: "", bio: "" };
+        this.showProfileWizard = true;
+      }
+    },
+
+    // 保存用户资料（首次设置时使用）
+    async saveProfile(session, existingProfiles) {
+      if (!this.profileForm.name) {
+        alert("Name is required!");
+        return;
+      }
+
+      try {
+        if (!session) {
+          throw new Error("No active session found");
+        }
+
+        console.log("Current session:", session);
+        console.log("Saving initial profile...", {
+          profileForm: this.profileForm,
+          existingProfiles
+        });
+
+        // 删除所有现有的profiles
+        if (existingProfiles && existingProfiles.length > 0) {
+          for (const profile of existingProfiles) {
+            try {
+              await this.$graffiti.delete(profile.url, session);
+              console.log("Deleted old profile:", profile.url);
+            } catch (deleteError) {
+              console.warn("Failed to delete old profile:", deleteError);
+              // 继续处理其他profiles
+            }
+          }
+        }
+
+        // 创建新的资料
+        const newProfile = await this.$graffiti.put(
+          {
+            value: {
+              name: this.profileForm.name.trim(),
+              pronouns: (this.profileForm.pronouns || "").trim(),
+              bio: (this.profileForm.bio || "").trim(),
+              published: Date.now()
+            },
+            channels: [session.actor]
+          },
+          session
+        );
+
+        console.log("Profile saved:", newProfile);
+        this.userProfile = newProfile;
+        this.showProfileWizard = false;
+      } catch (error) {
+        console.error("Failed to save profile - Full error:", {
+          error: error,
+          message: error.message,
+          stack: error.stack,
+          session: session,
+          profileForm: this.profileForm
+        });
+        alert(`Failed to save profile: ${error.message}`);
+      }
+    },
+
     async sendMessage(session) {
       if (!this.myMessage) return;
 
@@ -172,7 +284,106 @@ createApp({
         // All Messages面板：显示所有消息
         return [this.mainChannel];
       }
-    }
+    },
+
+    // 获取用户显示名称
+    getUserDisplayName(actor) {
+      if (actor === this.$graffitiSession.value?.actor) {
+        return this.userProfile?.value.name || actor;
+      }
+      // TODO: 获取其他用户的资料显示（这需要额外的实现）
+      return actor;
+    },
+
+    // 开始编辑资料
+    startProfileEdit(profile) {
+      this.editingProfile = profile;  // 保存当前正在编辑的profile对象
+      this.editForm = {
+        name: profile.value.name || "",
+        pronouns: profile.value.pronouns || "",
+        bio: profile.value.bio || ""
+      };
+      this.isEditing = true;
+    },
+
+    // 取消编辑
+    cancelProfileEdit() {
+      this.isEditing = false;
+      this.editingProfile = null;
+      this.editForm = {
+        name: "",
+        pronouns: "",
+        bio: ""
+      };
+    },
+
+    // 保存编辑的更改
+    async saveProfileChanges(session, existingProfiles) {
+      if (!this.editForm.name.trim()) {
+        alert("Name is required!");
+        return;
+      }
+
+      try {
+        if (!session) {
+          throw new Error("No active session found");
+        }
+
+        console.log("Current session:", session);
+        console.log("Saving profile changes...", {
+          editForm: this.editForm,
+          existingProfiles
+        });
+
+        // 删除所有现有的profiles
+        if (existingProfiles && existingProfiles.length > 0) {
+          for (const profile of existingProfiles) {
+            try {
+              await this.$graffiti.delete(profile.url, session);
+              console.log("Deleted old profile:", profile.url);
+            } catch (deleteError) {
+              console.warn("Failed to delete old profile:", deleteError);
+              // 继续处理其他profiles
+            }
+          }
+        }
+
+        // 创建新的profile
+        const newProfile = await this.$graffiti.put(
+          {
+            value: {
+              name: this.editForm.name.trim(),
+              pronouns: (this.editForm.pronouns || "").trim(),
+              bio: (this.editForm.bio || "").trim(),
+              published: Date.now()
+            },
+            channels: [session.actor]
+          },
+          session
+        );
+
+        console.log("Profile updated successfully:", newProfile);
+
+        // 重置编辑状态
+        this.isEditing = false;
+        this.editingProfile = null;
+        this.editForm = {
+          name: "",
+          pronouns: "",
+          bio: ""
+        };
+
+      } catch (error) {
+        console.error("Failed to update profile - Full error:", {
+          error: error,
+          message: error.message,
+          stack: error.stack,
+          session: session,
+          editForm: this.editForm
+        });
+        alert(`Failed to update profile: ${error.message}`);
+      }
+    },
   },
 
   computed: {
@@ -201,3 +412,19 @@ createApp({
     // graffiti: new GraffitiRemote(),
   })
   .mount("#app");
+
+// 监听登录状态变化
+const app = document.querySelector("#app").__vue_app__;
+const vm = app._instance.proxy;
+
+// 当用户登录时获取资料
+vm.$watch('$graffitiSession.value', async (newSession) => {
+  if (newSession) {
+    console.log("User logged in, fetching profile...");
+    await vm.fetchUserProfile(newSession);
+  } else {
+    console.log("User logged out");
+    vm.userProfile = null;
+    vm.showProfileWizard = false;
+  }
+}, { immediate: true });
