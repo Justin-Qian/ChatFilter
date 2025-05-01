@@ -10,11 +10,16 @@ body {
     padding: 20px;
     background-color: #f9f9f9;
     color: #333;
+    height: 100vh;
+    overflow: hidden;
 }
 
 #app {
     max-width: 800px;
     margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 h1, h2, h3 {
@@ -47,11 +52,111 @@ h1 {
 
 /* 主容器 */
 .main-container {
+    flex: 1;
     display: flex;
     flex-direction: column;
     background: white;
-    border-radius: 4px;
+    border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 100%;
+    overflow: hidden;
+    width: 90%;
+    margin: 0 auto;
+}
+
+/* 面板容器 */
+.panels-container {
+    flex: 1;
+    padding: 20px;
+    overflow: hidden;
+}
+
+/* 面板切换按钮 */
+.panel-switcher {
+    display: flex;
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.panel-switch-btn {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 14px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.panel-switch-btn:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-right: none;
+}
+
+.panel-switch-btn:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.panel-switch-btn:hover {
+    background: #f8f9fa;
+}
+
+.panel-switch-btn.active {
+    background: #f0f0f0;
+    border-width: 2px;
+    font-weight: bold;
+}
+
+/* 面板样式 */
+.panel {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    background: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.1em;
+}
+
+/* 左侧面板 */
+.all-messages-panel {
+    flex: 3;
+}
+
+/* 右侧面板 */
+.topic-filter-panel {
+    flex: 2;
+}
+
+/* 消息列表容器 */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background: #fff;
+}
+
+/* Send 部分 */
+.send-section {
+    padding: 15px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
 }
 
 /* 头部区域 */
@@ -59,13 +164,16 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #ddd;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
 }
 
 .header h2 {
     margin: 0;
+    color: #495057;
+    font-size: 24px;
+    font-weight: bold;
 }
 
 .logout-button {
@@ -92,9 +200,16 @@ h1 {
     border-radius: 4px;
 }
 
-.filter-label, .theme-label {
-    font-size: 13px;
-    color: #555;
+.theme-label, .filter-label {
+    color: #495057;
+    font-size: 15px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.theme-label strong, .filter-label strong {
+    color: #2c3338;
+    font-size: 16px;
 }
 
 /* 按钮容器 */
@@ -166,10 +281,6 @@ h1 {
 }
 
 /* Send 部分 */
-.send-section {
-    padding: 15px;
-}
-
 .send-button {
     background-color: #f0f0f0;
     border: 1px solid #ddd;
@@ -379,28 +490,43 @@ h1 {
     margin-top: 10px;
 }
 
-/* 响应式调整 */
-@media (max-width: 600px) {
-    .theme-buttons {
-        flex-wrap: wrap;
-    }
-
-    .message-form fieldset {
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .panels-container {
         flex-direction: column;
     }
 
-    .message-header {
-        flex-direction: column;
-        align-items: flex-start;
+    .panel {
+        width: 100%;
     }
 
-    .message-themes {
-        margin-left: 0;
-        margin-top: 5px;
+    .all-messages-panel,
+    .topic-filter-panel {
+        flex: none;
     }
+}
 
-    .message-actions {
-        margin-left: 0;
-        margin-top: 5px;
-    }
+/* Clear 按钮样式 */
+.clear-btn {
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    margin-right: 12px;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 5px 12px;
+    color: #6c757d;
+    transition: all 0.2s ease;
+}
+
+.clear-btn:hover:not(.disabled) {
+    background-color: #e9ecef;
+    border-color: #6c757d;
+    color: #495057;
+    transform: scale(1.05);
+}
+
+.clear-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-style: dashed;
 }

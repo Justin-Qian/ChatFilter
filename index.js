@@ -9,12 +9,14 @@ createApp({
       myMessage: "",
       sending: false,
       messageThemes: ["Attraction", "Food", "Stay", "Leisure"],
-      selectedThemes: [], // 默认不选择任何特定主题，显示所有消息
-      activeMessageThemes: ["Attraction"], // 默认选择景点主题发送消息
-      editingMessage: null, // 当前正在编辑的消息
-      editContent: "", // 编辑框的内容
+      selectedThemes: [], // 用于Topic Filter的主题筛选
+      activeMessageThemes: [], // 用于发送消息时的主题标记
+      editingMessage: null,
+      editContent: "",
+      activePanel: 'all',
       // 聊天频道设置
-      mainChannel: "travel-chat-channel", // 主聊天频道
+      mainChannel: "travel-chat-channel",
+      generalChannel: "travel-general-channel", // 无主题消息的频道
       themeChannels: {
         Attraction: "travel-attraction-channel",
         Food: "travel-food-channel",
@@ -30,22 +32,27 @@ createApp({
 
       this.sending = true;
 
-      // 准备发送到的频道，始终包含主频道
-      const channels = [this.mainChannel];
+      // 准备发送到的频道
+      let channels = [this.mainChannel];
 
-      // 添加选中的主题频道
-      this.activeMessageThemes.forEach(theme => {
-        channels.push(this.themeChannels[theme]);
-      });
+      // 如果有选中的主题，添加主题频道
+      if (this.activeMessageThemes.length > 0) {
+        this.activeMessageThemes.forEach(theme => {
+          channels.push(this.themeChannels[theme]);
+        });
+      } else {
+        // 如果没有选中主题，添加general频道
+        channels.push(this.generalChannel);
+      }
 
       await this.$graffiti.put(
         {
           value: {
             content: this.myMessage,
             published: Date.now(),
-            themes: this.activeMessageThemes, // 记录消息的主题，用于显示
+            themes: this.activeMessageThemes, // 可以是空数组
           },
-          channels: channels, // 发送到选中的主题频道
+          channels: channels,
         },
         session,
       );
@@ -123,33 +130,28 @@ createApp({
         // 如果主题不在数组中，添加它
         this.selectedThemes.push(theme);
       } else {
-        // 如果主题已经在数组中，移除它
+        // 可以移除主题，允许没有主题被选中
         this.selectedThemes.splice(index, 1);
       }
     },
 
-    // 清除所有筛选器
-    clearThemeFilters() {
-      this.selectedThemes = [];
+    // 清除所有选中的主题
+    clearThemes() {
+      if (this.selectedThemes.length > 0) {
+        this.selectedThemes = [];
+      }
     },
 
     // 切换发送消息的主题
     toggleActiveTheme(theme) {
-      const index = this.activeMessageThemes.indexOf(theme);
-      if (index === -1) {
-        // 如果主题不在数组中，添加它
-        this.activeMessageThemes.push(theme);
-      } else {
-        // 如果主题已经在数组中且不是唯一一个，移除它
-        if (this.activeMessageThemes.length > 1) {
-          this.activeMessageThemes.splice(index, 1);
-        }
-      }
+      // 同步更新筛选主题和发送主题
+      this.toggleThemeFilter(theme);
+      this.activeMessageThemes = [...this.selectedThemes];
     },
 
     // 是否主题在活跃发送列表中
     isThemeActive(theme) {
-      return this.activeMessageThemes.includes(theme);
+      return this.selectedThemes.includes(theme);
     },
 
     // 是否主题被选中用于筛选
@@ -159,13 +161,17 @@ createApp({
 
     // 获取用于筛选的频道
     getFilterChannels() {
-      if (this.selectedThemes.length === 0) {
-        // 如果没有选择任何特定主题，使用主频道
+      if (this.activePanel === 'filter') {
+        // Topic Filter面板：如果没有选择主题，返回空数组（不显示任何消息）
+        if (this.selectedThemes.length === 0) {
+          return [];
+        }
+        // 返回选中的主题频道
+        return this.selectedThemes.map(theme => this.themeChannels[theme]);
+      } else {
+        // All Messages面板：显示所有消息
         return [this.mainChannel];
       }
-
-      // 返回选中的主题频道
-      return this.selectedThemes.map(theme => this.themeChannels[theme]);
     }
   },
 
@@ -177,15 +183,16 @@ createApp({
 
     // 获取当前选中主题的显示文本
     selectedThemesDisplay() {
-      if (this.selectedThemes.length === 0) {
-        return "All Themes";
+      if (this.activePanel === 'filter') {
+        return this.selectedThemes.length === 0 ? "No Theme Selected" : this.selectedThemes.join(", ");
+      } else {
+        return this.selectedThemes.length === 0 ? "All Themes" : this.selectedThemes.join(", ");
       }
-      return this.selectedThemes.join(", ");
     },
 
     // 获取当前活跃发送主题的显示文本
     activeThemesDisplay() {
-      return this.activeMessageThemes.join(", ");
+      return this.selectedThemes.length === 0 ? "No Theme" : this.selectedThemes.join(", ");
     }
   }
 })
