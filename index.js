@@ -115,11 +115,12 @@ createApp({
           {
             value: {
               name: this.profileForm.name.trim(),
+              generator: "https://Justin-Qian.github.io/ChatFilter/",
               pronouns: (this.profileForm.pronouns || "").trim(),
               bio: (this.profileForm.bio || "").trim(),
               published: Date.now()
             },
-            channels: [session.actor]
+            channels: ["designftw-2025-studio2", session.actor]
           },
           session
         );
