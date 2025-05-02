@@ -21,7 +21,7 @@ createApp({
       // 用户资料
       userProfile: null,
       showProfileWizard: false,  // 控制向导显示
-      showProfile: false,  // 控制资料显示
+      showProfile: false,
       profileForm: {
         name: "",
         pronouns: "",
