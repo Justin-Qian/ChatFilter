@@ -48,6 +48,28 @@ createApp({
   },
 
   methods: {
+    // 滚动到底部
+    scrollToBottom() {
+      // 根据当前活动面板选择对应的消息容器
+      const activePanel = this.activePanel;
+      const messagesContainer = document.querySelector(`.${activePanel === 'filter' ? 'topic-filter-panel' : 'all-messages-panel'} .messages`);
+
+      if (messagesContainer) {
+        // 使用 nextTick 确保在 DOM 更新后滚动
+        this.$nextTick(() => {
+          // 添加一个小延时，确保消息完全加载
+          setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }, 100);
+        });
+      }
+    },
+
+    // 监听消息加载完成
+    onMessagesLoaded() {
+      this.scrollToBottom();
+    },
+
     // 获取用户资料
     async fetchUserProfile(session) {
       try {
@@ -172,25 +194,26 @@ createApp({
 
       this.sending = false;
       this.myMessage = "";
+
+      // 等待DOM更新后再执行滚动和聚焦
       await this.$nextTick();
+      this.scrollToBottom();
       this.$refs.messageInput.focus();
     },
 
     // 开始编辑消息
     startEdit(message) {
       this.editingMessage = message;
-      this.editContent = message.value.content;
     },
 
     // 取消编辑
     cancelEdit() {
       this.editingMessage = null;
-      this.editContent = "";
     },
 
     // 保存编辑后的消息
-    async saveEdit(session) {
-      if (!this.editingMessage || !this.editContent) return;
+    async saveEdit(session, newContent) {
+      if (!this.editingMessage || !newContent) return;
 
       try {
         // 先删除原来的消息
@@ -209,7 +232,7 @@ createApp({
         await this.$graffiti.put(
           {
             value: {
-              content: this.editContent,
+              content: newContent,
               published: this.editingMessage.value.published,  // 保持原有的发布时间
               themes: messageThemes, // 保持原有主题
             },
@@ -219,7 +242,6 @@ createApp({
         );
 
         this.editingMessage = null;
-        this.editContent = "";
       } catch (error) {
         console.error("Failed to edit message:", error);
       }
@@ -246,12 +268,29 @@ createApp({
         // 可以移除主题，允许没有主题被选中
         this.selectedThemes.splice(index, 1);
       }
+      // 等待 DOM 更新后滚动到底部
+      this.$nextTick(() => {
+        this.scrollToBottom();
+      });
     },
 
     // 清除所有选中的主题
     clearThemes() {
       if (this.selectedThemes.length > 0) {
-        this.selectedThemes = [];
+        // 添加消失动画
+        const themeButtons = document.querySelectorAll('.theme-toggle:not(.clear-btn)');
+        themeButtons.forEach(button => {
+          button.classList.add('disappear');
+        });
+
+        // 等待动画完成后清除主题
+        setTimeout(() => {
+          this.selectedThemes = [];
+          // 移除动画类
+          themeButtons.forEach(button => {
+            button.classList.remove('disappear');
+          });
+        }, 500);
       }
     },
 

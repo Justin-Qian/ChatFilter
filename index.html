@@ -152,21 +152,34 @@
                         </div>
                     </div>
 
-                    <!-- 面板切换按钮 -->
-                    <div class="panel-switcher">
-                        <button
-                            @click="activePanel = 'all'"
-                            :class="{ active: activePanel === 'all' }"
-                            class="panel-switch-btn"
-                        >All Messages</button>
-                        <button
-                            @click="activePanel = 'filter'"
-                            :class="{ active: activePanel === 'filter' }"
-                            class="panel-switch-btn"
-                        >Topic Filter</button>
-                    </div>
-
+                    <!-- 群聊面板 -->
                     <div class="panels-container">
+                        <!-- 面板切换按钮 -->
+                        <div class="mdc-tab-bar" role="tablist" :data-active="activePanel">
+                            <button
+                                class="mdc-tab"
+                                role="tab"
+                                aria-selected="true"
+                                @click="activePanel = 'all'"
+                                :class="{ 'mdc-tab--active': activePanel === 'all' }"
+                            >
+                                <span class="mdc-tab__content">
+                                    <span class="mdc-tab__text-label">All Messages</span>
+                                </span>
+                            </button>
+                            <button
+                                class="mdc-tab"
+                                role="tab"
+                                aria-selected="false"
+                                @click="activePanel = 'filter'"
+                                :class="{ 'mdc-tab--active': activePanel === 'filter' }"
+                            >
+                                <span class="mdc-tab__content">
+                                    <span class="mdc-tab__text-label">Topic Filter</span>
+                                </span>
+                            </button>
+                        </div>
+
                         <!-- 左侧面板 - All Messages -->
                         <div class="panel all-messages-panel" v-show="activePanel === 'all'">
 
@@ -186,11 +199,12 @@
                                         }
                                     }
                                 }"
+                                @update="scrollToBottom"
                             >
                                 <div class="messages">
                                     <div v-if="isInitialPolling">Loading messages...</div>
-                                    <ul v-else>
-                                        <li v-for="message of messageObjects.sort((a, b) => b.value.published - a.value.published)"
+                                    <ul v-else @vue:mounted="onMessagesLoaded">
+                                        <li v-for="message of messageObjects.sort((a, b) => a.value.published - b.value.published)"
                                             :key="message.url"
                                         >
                                             <message-item
@@ -201,6 +215,8 @@
                                                 :display-name="message.actor === $graffitiSession.value.actor ? (userProfile?.value.name || 'You') : message.actor"
                                                 :can-edit="message.actor === $graffitiSession.value.actor"
                                                 @edit="startEdit(message)"
+                                                @save="saveEdit($graffitiSession.value, $event)"
+                                                @cancel="cancelEdit"
                                                 @delete="deleteMessage(message, $graffitiSession.value)"
                                             />
                                         </li>
@@ -211,7 +227,7 @@
                             <!-- SEND SECTION -->
                             <div class="send-section">
                                 <div class="section-header">
-                                    <span class="theme-label"><strong>Send</strong> By Themes: {{ activeThemesDisplay }}</span>
+                                    <span class="theme-label"><strong>Send</strong> By Topics</span>
                                 </div>
 
                                 <!-- 主题选择按钮 -->
@@ -246,16 +262,6 @@
                                                 ref="messageInput"
                                                 v-focus
                                             />
-                                            <div class="active-themes">
-                                                <span
-                                                    v-for="(theme, index) in activeMessageThemes"
-                                                    :key="index"
-                                                    class="active-theme"
-                                                    :class="theme.toLowerCase()"
-                                                >
-                                                    {{ theme }}
-                                                </span>
-                                            </div>
                                         </div>
                                         <input
                                             type="submit"
@@ -270,24 +276,28 @@
                         <!-- 右侧面板 - Topic Filter -->
                         <div class="panel topic-filter-panel" v-show="activePanel === 'filter'">
 
-                            <!-- 主题筛选按钮 -->
-                            <div class="theme-buttons-container">
-                                <span class="filter-label"><strong>Read</strong> By Themes: {{ selectedThemesDisplay }}</span>
-                                <div class="theme-buttons">
-                                    <button
-                                        @click="clearThemes()"
+                            <div class="filter-section">
+                                <div class="section-header">
+                                    <span class="filter-label"><strong>Read</strong> By Topics</span>
+                                </div>
+                                <!-- 主题筛选按钮 -->
+                                <div class="theme-buttons-container">
+                                    <div class="theme-buttons">
+                                        <button
+                                            @click="clearThemes()"
                                         class="theme-toggle clear-btn"
                                         :class="{ 'disabled': selectedThemes.length === 0 }"
-                                    >/</button>
-                                    <button
-                                        v-for="theme in messageThemes"
-                                        :key="theme"
-                                        @click="toggleThemeFilter(theme)"
-                                        :class="{ active: isThemeSelected(theme), ['theme-' + theme.toLowerCase()]: true }"
-                                        class="theme-toggle"
-                                    >
-                                        {{ theme }}
-                                    </button>
+                                        >/</button>
+                                        <button
+                                            v-for="theme in messageThemes"
+                                            :key="theme"
+                                            @click="toggleThemeFilter(theme)"
+                                            :class="{ active: isThemeSelected(theme), ['theme-' + theme.toLowerCase()]: true }"
+                                            class="theme-toggle"
+                                        >
+                                            {{ theme }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -310,44 +320,27 @@
                             >
                                 <div class="messages">
                                     <div v-if="isInitialPolling">Loading messages...</div>
-                                    <ul v-else>
-                                        <li
-                                            v-for="message of messageObjects.sort((a, b) => b.value.published - a.value.published)"
+                                    <ul v-else @vue:mounted="scrollToBottom">
+                                        <li v-for="message of messageObjects.sort((a, b) => a.value.published - b.value.published)"
                                             :key="message.url"
-                                            :class="{
-                                                'my-message': message.actor === $graffitiSession.value.actor
-                                            }"
                                         >
-                                            <div class="message-header">
-                                                <strong>
-                                                    <template v-if="message.actor === $graffitiSession.value.actor">
-                                                        {{ userProfile?.value.name || 'You' }}
-                                                    </template>
-                                                    <template v-else>
-                                                        {{ message.actor }}
-                                                    </template>
-                                                </strong>
-                                                <div class="message-themes">
-                                                    <span
-                                                        v-for="(theme, index) in message.value.themes"
-                                                        :key="index"
-                                                        class="message-theme"
-                                                        :class="theme.toLowerCase()"
-                                                    >
-                                                        {{ theme }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="message-content">
-                                                {{ message.value.content }}
-                                            </div>
-                                            <div class="message-time">
-                                                {{ new Date(message.value.published).toLocaleString() }}
-                                            </div>
+                                            <message-item
+                                                :content="message.value.content"
+                                                :themes="message.value.themes || []"
+                                                :time="message.value.published"
+                                                :is-my-message="message.actor === $graffitiSession.value.actor"
+                                                :display-name="message.actor === $graffitiSession.value.actor ? (userProfile?.value.name || 'You') : message.actor"
+                                                :can-edit="message.actor === $graffitiSession.value.actor"
+                                                @edit="startEdit(message)"
+                                                @save="saveEdit($graffitiSession.value, $event)"
+                                                @cancel="cancelEdit"
+                                                @delete="deleteMessage(message, $graffitiSession.value)"
+                                            />
                                         </li>
                                     </ul>
                                 </div>
                             </graffiti-discover>
+
                         </div>
                     </div>
                 </div>

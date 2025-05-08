@@ -1,0 +1,39 @@
+<div class="message-item" :class="{ 'my-message': isMyMessage }">
+    <div class="message-header">
+        <strong class="message-name">{{ displayName }}</strong>
+        <span class="message-time">{{ new Date(time).toLocaleString() }}</span>
+    </div>
+    <div class="message-box" :class="{ 'my-message-box': isMyMessage }">
+        <div class="message-themes">
+            <span
+                v-for="(theme, index) in themes"
+                :key="index"
+                class="message-theme"
+                :class="theme.toLowerCase()"
+            >
+                {{ theme }}
+            </span>
+        </div>
+        <div class="message-content-wrapper">
+            <!-- 非编辑状态 -->
+            <div v-if="!isEditing" class="message-content">
+                {{ content }}
+            </div>
+            <!-- 编辑状态 -->
+            <div v-else class="edit-mode">
+                <input type="text" v-model="editContent" class="edit-input" />
+                <div class="edit-actions">
+                    <button @click="$emit('save', editContent)" class="action-btn">Save</button>
+                    <button @click="cancelEdit" class="action-btn">Cancel</button>
+                </div>
+            </div>
+            <div class="message-actions" v-if="canEdit && !isEditing">
+                <button class="more-btn" @click="showActions = !showActions">⋮</button>
+                <div class="action-menu" v-if="showActions">
+                    <button @click="startEdit" class="action-btn">Edit</button>
+                    <button @click="$emit('delete')" class="action-btn delete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
