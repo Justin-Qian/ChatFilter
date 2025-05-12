@@ -286,6 +286,7 @@ createApp({
         // 等待动画完成后清除主题
         setTimeout(() => {
           this.selectedThemes = [];
+          this.activeMessageThemes = this.selectedThemes;
           // 移除动画类
           themeButtons.forEach(button => {
             button.classList.remove('disappear');
@@ -298,7 +299,7 @@ createApp({
     toggleActiveTheme(theme) {
       // 同步更新筛选主题和发送主题
       this.toggleThemeFilter(theme);
-      this.activeMessageThemes = [...this.selectedThemes];
+      this.activeMessageThemes = this.selectedThemes;
     },
 
     // 是否主题在活跃发送列表中
