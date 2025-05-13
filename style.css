@@ -203,6 +203,7 @@ h1 {
 
 /* 主题按钮 */
 .theme-buttons {
+    flex: 1;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
@@ -551,32 +552,63 @@ h1 {
     border: 1px solid #ddd;
 }
 
+/* 预设主题颜色 */
+:root {
+    --theme-color-1: #4CAF50;  /* 绿色 */
+    --theme-color-2: #2196F3;  /* 蓝色 */
+    --theme-color-3: #FF9800;  /* 橙色 */
+    --theme-color-4: #E91E63;  /* 粉色 */
+    --theme-color-5: #9C27B0;  /* 紫色 */
+    --theme-color-6: #00BCD4;  /* 青色 */
+
+    --theme-bg-color-1: rgba(76, 175, 80, 0.1);
+    --theme-bg-color-2: rgba(33, 150, 243, 0.1);
+    --theme-bg-color-3: rgba(255, 152, 0, 0.1);
+    --theme-bg-color-4: rgba(233, 30, 99, 0.1);
+    --theme-bg-color-5: rgba(156, 39, 176, 0.1);
+    --theme-bg-color-6: rgba(0, 188, 212, 0.1);
+}
+
 /* 主题按钮基础样式 */
-.theme-toggle.active {
-    /* background-color: #f5f5f5; */
-    border-color: #ccc;
-    font-weight: bold;
+.theme-toggle {
+    position: relative;
+    transition: all 0.3s ease;
 }
 
-/* 主题按钮颜色 */
-.theme-toggle.active.theme-attraction {
-    border-left: 3px solid #4CAF50;
-    background-color: rgba(106, 165, 108, 0.1);
+/* 添加悬停效果 */
+.theme-toggle:hover {
+    opacity: 0.8;
 }
 
-.theme-toggle.active.theme-food {
-    border-left: 3px solid #FF9800;
-    background-color: rgba(255, 182, 102, 0.1);
+/* 主题按钮颜色 - 使用预设颜色 */
+.theme-toggle.active[data-color="1"] {
+    border-left: 3px solid var(--theme-color-1);
+    background-color: var(--theme-bg-color-1);
 }
 
-.theme-toggle.active.theme-stay {
-    border-left: 3px solid #2196F3;
-    background-color: rgba(103, 169, 223, 0.1);
+.theme-toggle.active[data-color="2"] {
+    border-left: 3px solid var(--theme-color-2);
+    background-color: var(--theme-bg-color-2);
 }
 
-.theme-toggle.active.theme-leisure {
-    border-left: 3px solid #9C27B0;
-    background-color: rgba(176, 107, 186, 0.1);
+.theme-toggle.active[data-color="3"] {
+    border-left: 3px solid var(--theme-color-3);
+    background-color: var(--theme-bg-color-3);
+}
+
+.theme-toggle.active[data-color="4"] {
+    border-left: 3px solid var(--theme-color-4);
+    background-color: var(--theme-bg-color-4);
+}
+
+.theme-toggle.active[data-color="5"] {
+    border-left: 3px solid var(--theme-color-5);
+    background-color: var(--theme-bg-color-5);
+}
+
+.theme-toggle.active[data-color="6"] {
+    border-left: 3px solid var(--theme-color-6);
+    background-color: var(--theme-bg-color-6);
 }
 
 .message-actions {
@@ -1213,4 +1245,39 @@ h1 {
     100% {
         transform: scale(1);
     }
+}
+
+.theme-dialog {
+    border: 2px solid #666666;
+    border-radius: 4px;
+    padding: 4px;
+    background-color: #ebebeb;
+}
+
+.theme-dialog-content {
+    display: flex;
+    flex-direction: row;
+}
+
+.theme-dialog-content input {
+    flex: 2;
+    padding: 8px;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.theme-dialog-actions {
+    flex: 1;
+    display: flex;
+}
+.theme-buttons-container .save-btn{
+    background-color: #bdcabe;
+    color: #000;
+    border: 1px solid #666666;
+}
+.theme-buttons-container .cancel-btn{
+    background-color: #cab9b9;
+    color: #000;
+    border: 1px solid #666666;
 }

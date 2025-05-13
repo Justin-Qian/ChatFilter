@@ -160,7 +160,7 @@
                                 class="mdc-tab"
                                 role="tab"
                                 aria-selected="true"
-                                @click="activePanel = 'all'"
+                                @click="activePanel = 'all'; scrollToBottom()"
                                 :class="{ 'mdc-tab--active': activePanel === 'all' }"
                             >
                                 <span class="mdc-tab__content">
@@ -171,7 +171,7 @@
                                 class="mdc-tab"
                                 role="tab"
                                 aria-selected="false"
-                                @click="activePanel = 'filter'"
+                                @click="activePanel = 'filter'; scrollToBottom()"
                                 :class="{ 'mdc-tab--active': activePanel === 'filter' }"
                             >
                                 <span class="mdc-tab__content">
@@ -243,11 +243,33 @@
                                             :key="theme"
                                             type="button"
                                             @click="toggleActiveTheme(theme)"
-                                            :class="{ active: isThemeActive(theme), ['theme-' + theme.toLowerCase()]: true }"
+                                            :class="{ active: isThemeActive(theme) }"
                                             class="theme-toggle"
+                                            :data-color="getThemeColor(theme)"
                                         >
                                             {{ theme }}
                                         </button>
+                                        <!-- 添加新主题按钮 -->
+                                        <button
+                                            v-if="showAddThemeDialog === false"
+                                            @click="showAddThemeDialog = true"
+                                            class="theme-toggle add-btn"
+                                        >+</button>
+                                        <!-- 添加主题对话框 -->
+                                        <div v-if="showAddThemeDialog" class="theme-dialog">
+                                            <div class="theme-dialog-content">
+                                                <input
+                                                    type="text"
+                                                    v-model="newTheme"
+                                                    placeholder="Input new theme"
+                                                    @keyup.enter="addNewTheme"
+                                                />
+                                                <div class="theme-dialog-actions">
+                                                    <button @click="addNewTheme" class="save-btn">Save</button>
+                                                    <button @click="showAddThemeDialog = false" class="cancel-btn">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -292,8 +314,9 @@
                                             v-for="theme in messageThemes"
                                             :key="theme"
                                             @click="toggleThemeFilter(theme)"
-                                            :class="{ active: isThemeSelected(theme), ['theme-' + theme.toLowerCase()]: true }"
+                                            :class="{ active: isThemeSelected(theme) }"
                                             class="theme-toggle"
+                                            :data-color="getThemeColor(theme)"
                                         >
                                             {{ theme }}
                                         </button>
@@ -304,7 +327,7 @@
                             <!-- 筛选后的消息列表 -->
                             <graffiti-discover
                                 v-slot="{ objects: messageObjects, isInitialPolling }"
-                                :channels="filterChannels"
+                                :channels="[mainChannel]"
                                 :schema="{
                                     properties: {
                                         value: {
@@ -321,7 +344,10 @@
                                 <div class="messages">
                                     <div v-if="isInitialPolling">Loading messages...</div>
                                     <ul v-else @vue:mounted="scrollToBottom">
-                                        <li v-for="message of messageObjects.sort((a, b) => a.value.published - b.value.published)"
+                                        <li v-for="message of messageObjects
+                                        .filter(msg => selectedThemes.every(theme =>
+                                            (msg.value.themes || []).includes(theme)))
+                                        .sort((a, b) => a.value.published - b.value.published)"
                                             :key="message.url"
                                         >
                                             <message-item
